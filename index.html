@@ -382,10 +382,9 @@ resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 // ── Audio ──────────────────────────────────────────────────────
-let analyser, dataArray;
+let analyser, dataArray, freqData;
 let smoothedRMS = 0;
 const RMS_SMOOTH = 0.82;
-const THRESHOLD  = 0.013;
 
 function getRMS(buf) {
   let sq = 0;
@@ -394,6 +393,16 @@ function getRMS(buf) {
     sq += v * v;
   }
   return Math.sqrt(sq / buf.length);
+}
+
+// Blowing = high amplitude AND broadband spectrum (energy across many bins).
+// Speech/music has harmonic peaks (narrow bins); ambient is low amplitude.
+// Bins 2-58 ≈ 170Hz-5kHz with fftSize 512 @ 44.1kHz.
+function isBlowing(rms, freq) {
+  if (rms < 0.030) return false;
+  let active = 0;
+  for (let i = 2; i <= 58; i++) { if (freq[i] > 60) active++; }
+  return active >= 10;
 }
 
 // ── Confetti ───────────────────────────────────────────────────
@@ -684,8 +693,9 @@ function gameLoop(ts) {
   lastTs = ts;
 
   analyser.getByteTimeDomainData(dataArray);
+  analyser.getByteFrequencyData(freqData);
   smoothedRMS = RMS_SMOOTH * smoothedRMS + (1 - RMS_SMOOTH) * getRMS(dataArray);
-  const blowing = smoothedRMS > THRESHOLD;
+  const blowing = isBlowing(smoothedRMS, freqData);
   micDot.classList.toggle('blowing', blowing);
 
   if (currentPage === 0) updateBubble(dt, blowing);
@@ -726,11 +736,12 @@ const MIC_GUIDANCE = {
   },
   'ios-chrome': {
     steps: [
-      'Chrome on iPhone doesn\'t support mic in web apps.',
-      'Open this page in <b>Safari</b> instead — it works there!',
-      'Tap the share button (box with arrow) → <b>Open in Safari</b>.',
+      'You tapped "Don\'t Allow" — tap <b>Refresh</b> below to try again.',
+      'When the mic prompt appears, tap <b>Allow</b>.',
+      'Still blocked? Open <b>Settings → Chrome → Microphone</b> and turn it <b>On</b>.',
+      'Then come back here and refresh.',
     ],
-    note: 'iPhone · Chrome — switch to Safari',
+    note: 'iPhone/iPad · Chrome',
   },
   'android': {
     steps: [
@@ -791,7 +802,8 @@ async function tryStart() {
   const source = ctx.createMediaStreamSource(stream);
   analyser     = ctx.createAnalyser();
   analyser.fftSize = 512;
-  dataArray    = new Uint8Array(analyser.fftSize);
+  dataArray = new Uint8Array(analyser.fftSize);
+  freqData  = new Uint8Array(analyser.frequencyBinCount);
   source.connect(analyser);
 
   overlay.classList.add('hidden');
