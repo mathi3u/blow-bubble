@@ -11,44 +11,88 @@
 
     body {
       background: radial-gradient(ellipse at 30% 20%, #0e1f3a 0%, #04080f 100%);
-      min-height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      height: 100dvh;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
-    /* Bubble shell */
+    /* ── FX canvas ─────────────────────────────────────────── */
+    #fx-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* ── Flash ─────────────────────────────────────────────── */
+    #flash {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 51;
+      opacity: 0;
+    }
+    #flash.pop       { animation: flash-pop       0.5s ease-out forwards; }
+    #flash.celebrate { animation: flash-celebrate 0.4s ease-out forwards; }
+    @keyframes flash-pop       { from { background: #fff; opacity: .65; } to { opacity: 0; } }
+    @keyframes flash-celebrate { from { background: gold; opacity: .5;  } to { opacity: 0; } }
+
+    /* ── Slider ─────────────────────────────────────────────── */
+    #slider-track {
+      display: flex;
+      width: 200vw;
+      height: 100dvh;
+      transition: transform 0.36s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .page {
+      width: 100vw;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* ── Bubble ─────────────────────────────────────────────── */
     #bubble {
       border-radius: 50%;
       position: relative;
       flex-shrink: 0;
     }
 
-    /* Glass surface + highlight */
     #bubble::before {
       content: '';
       position: absolute;
       inset: 0;
       border-radius: 50%;
       background:
-        radial-gradient(circle at 34% 26%, rgba(255,255,255,0.93) 0%, rgba(255,255,255,0) 26%),
-        radial-gradient(circle at 68% 74%, rgba(140,230,255,0.38) 0%, transparent 32%),
+        radial-gradient(circle at 34% 26%, rgba(255,255,255,.93) 0%, rgba(255,255,255,0) 26%),
+        radial-gradient(circle at 68% 74%, rgba(140,230,255,.38) 0%, transparent 32%),
         radial-gradient(circle at 50% 50%,
-          rgba(180,225,255,0.07) 0%,
-          rgba(80,170,255,0.20) 48%,
-          rgba(30,110,220,0.08) 78%,
+          rgba(180,225,255,.07) 0%,
+          rgba(80,170,255,.20) 48%,
+          rgba(30,110,220,.08) 78%,
           transparent 100%
         );
-      border: 1.5px solid rgba(180,220,255,0.40);
+      border: 1.5px solid rgba(180,220,255,.40);
       box-shadow:
-        inset 0 0 30px rgba(80,160,255,0.14),
-        0 0 60px rgba(80,180,255,0.10),
-        0 0 130px rgba(50,130,255,0.06);
+        inset 0 0 30px rgba(80,160,255,.14),
+        0 0 60px  rgba(80,180,255,.10),
+        0 0 130px rgba(50,130,255,.06);
+      transition: box-shadow 0.4s;
     }
 
-    /* Iridescent shimmer ring */
+    #bubble.maxed::before {
+      box-shadow:
+        inset 0 0 40px rgba(80,220,255,.30),
+        0 0 80px  rgba(80,220,255,.28),
+        0 0 200px rgba(50,200,255,.18);
+    }
+
     #bubble::after {
       content: '';
       position: absolute;
@@ -56,16 +100,89 @@
       border-radius: 50%;
       background: conic-gradient(
         from 180deg,
-        rgba(255,80,180,0.12),
-        rgba(80,180,255,0.18),
-        rgba(80,255,180,0.12),
-        rgba(255,230,60,0.12),
-        rgba(255,80,180,0.12)
+        rgba(255,80,180,.12),
+        rgba(80,180,255,.18),
+        rgba(80,255,180,.12),
+        rgba(255,230,60,.12),
+        rgba(255,80,180,.12)
       );
       mix-blend-mode: screen;
     }
 
-    /* Overlay */
+    @keyframes bubble-pop {
+      0%   { transform: scale(1);    opacity: 1; }
+      40%  { transform: scale(1.35); opacity: .9; }
+      100% { transform: scale(2);    opacity: 0; }
+    }
+    #bubble.popping { animation: bubble-pop 0.42s ease-out forwards; }
+
+    /* ── Level badge ─────────────────────────────────────────── */
+    #level-badge {
+      position: absolute;
+      bottom: max(4rem, calc(env(safe-area-inset-bottom) + 3rem));
+      font-size: 1.6rem;
+      transition: transform 0.2s;
+    }
+
+    @keyframes level-up-anim {
+      0%   { transform: scale(2.5) translateY(-10px); opacity: 0; }
+      35%  { transform: scale(1);  translateY(0);     opacity: 1; }
+      100% { opacity: 1; }
+    }
+    #level-badge.bounce { animation: level-up-anim 0.7s ease-out both; }
+
+    /* ── Pinwheel ────────────────────────────────────────────── */
+    #pinwheel-scene {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #pinwheel-svg {
+      width: min(240px, 58vw);
+      height: min(240px, 58vw);
+      transform-origin: center;
+    }
+
+    #pinwheel-stick {
+      width: 5px;
+      height: 90px;
+      background: linear-gradient(to bottom, #aaa, #555);
+      border-radius: 2.5px;
+    }
+
+    /* ── Mode dots ───────────────────────────────────────────── */
+    #mode-dots {
+      position: fixed;
+      bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.5rem;
+      z-index: 10;
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.22);
+      transition: background .3s;
+    }
+    .dot.active { background: rgba(255,255,255,.8); }
+
+    /* ── Swipe hint ──────────────────────────────────────────── */
+    #swipe-hint {
+      position: fixed;
+      bottom: max(2.4rem, calc(env(safe-area-inset-bottom) + 1.4rem));
+      right: 1.4rem;
+      color: rgba(255,255,255,.28);
+      font-size: .78rem;
+      letter-spacing: .06em;
+      z-index: 10;
+      transition: opacity .5s;
+    }
+    #swipe-hint.hidden { opacity: 0; }
+
+    /* ── Overlay ─────────────────────────────────────────────── */
     #overlay {
       position: fixed;
       inset: 0;
@@ -73,196 +190,596 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
-      background: rgba(0,0,0,0.72);
+      gap: .6rem;
+      background: rgba(0,0,0,.72);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       cursor: pointer;
-      z-index: 10;
-      transition: opacity 0.45s ease;
+      z-index: 20;
+      transition: opacity .45s ease;
+      padding: 2rem;
+      text-align: center;
     }
-
     #overlay.hidden { opacity: 0; pointer-events: none; }
 
-    #overlay .emoji { font-size: clamp(2.5rem, 14vw, 5rem); }
-
+    #overlay .big-emoji { font-size: clamp(2.5rem, 13vw, 4.5rem); margin-bottom: .2rem; }
     #overlay h1 {
-      font-size: clamp(1.6rem, 8vw, 2.8rem);
-      font-weight: 600;
+      font-size: clamp(1.5rem, 7vw, 2.5rem);
+      font-weight: 700;
       color: #fff;
-      letter-spacing: -0.02em;
+      letter-spacing: -.02em;
+    }
+    #overlay .sub {
+      color: rgba(255,255,255,.55);
+      font-size: clamp(.9rem, 3.5vw, 1.05rem);
+      margin-top: .2rem;
     }
 
-    #overlay p {
-      color: rgba(255,255,255,0.55);
-      font-size: clamp(0.95rem, 4vw, 1.1rem);
+    /* Mic error state */
+    #mic-error {
+      display: none;
+      background: rgba(255,60,60,.12);
+      border: 1px solid rgba(255,100,100,.3);
+      border-radius: 1rem;
+      padding: 1.2rem 1.4rem;
+      margin-top: 1rem;
+      max-width: 340px;
+      text-align: left;
     }
+    #mic-error.visible { display: block; }
+    #mic-error h3 {
+      color: #ff8080;
+      font-size: 1rem;
+      margin-bottom: .6rem;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    #mic-error ol {
+      color: rgba(255,255,255,.7);
+      font-size: .85rem;
+      line-height: 1.7;
+      padding-left: 1.2rem;
+    }
+    #mic-error ol li { margin-bottom: .2rem; }
+    #mic-error .platform-note {
+      margin-top: .8rem;
+      padding-top: .7rem;
+      border-top: 1px solid rgba(255,255,255,.1);
+      color: rgba(255,255,255,.4);
+      font-size: .78rem;
+    }
+    #retry-btn {
+      margin-top: 1rem;
+      padding: .6rem 1.4rem;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 2rem;
+      color: #fff;
+      font-size: .9rem;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    #retry-btn:hover { background: rgba(255,255,255,.2); }
 
-    /* Mic status indicator */
-    #status {
+    /* ── Status bar ─────────────────────────────────────────── */
+    #status-bar {
       position: fixed;
       top: max(1.5rem, env(safe-area-inset-top, 1.5rem));
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       align-items: center;
-      gap: 0.45rem;
+      gap: .45rem;
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity .3s;
+      z-index: 10;
     }
-
-    #status.visible { opacity: 1; }
+    #status-bar.visible { opacity: 1; }
 
     #mic-dot {
-      width: 7px;
-      height: 7px;
+      width: 7px; height: 7px;
       border-radius: 50%;
       background: #52d882;
       animation: blink 2s ease-in-out infinite;
     }
-
     #mic-dot.blowing { background: #60b8ff; animation: none; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
 
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
-    }
-
-    #status span {
-      color: rgba(255,255,255,0.32);
-      font-size: 0.72rem;
-      letter-spacing: 0.09em;
+    #status-bar span {
+      color: rgba(255,255,255,.30);
+      font-size: .72rem;
+      letter-spacing: .09em;
       text-transform: uppercase;
     }
-
-    /* Hint text */
-    #hint {
-      position: fixed;
-      bottom: max(2rem, env(safe-area-inset-bottom, 2rem));
-      left: 50%;
-      transform: translateX(-50%);
-      color: rgba(255,255,255,0.25);
-      font-size: 0.82rem;
-      letter-spacing: 0.06em;
-      white-space: nowrap;
-      pointer-events: none;
-      transition: opacity 0.5s;
-    }
-
-    #hint.hidden { opacity: 0; }
   </style>
 </head>
 <body>
 
-<div id="bubble"></div>
+<canvas id="fx-canvas"></canvas>
+<div id="flash"></div>
 
+<div id="slider-track">
+
+  <!-- ── PAGE 0: Bubble ──────────────────────────────────── -->
+  <div class="page" id="bubble-page">
+    <div id="bubble"></div>
+    <div id="level-badge">⭐</div>
+  </div>
+
+  <!-- ── PAGE 1: Pinwheel ────────────────────────────────── -->
+  <div class="page" id="pinwheel-page">
+    <div id="pinwheel-scene">
+      <svg id="pinwheel-svg" viewBox="-50 -50 100 100">
+        <!-- 4 blades: same path rotated at 90° intervals -->
+        <path d="M 0 0 L 4 -28 A 30 30 0 0 1 28 -4 Z" fill="#FF6B6B"/>
+        <path d="M 0 0 L 4 -28 A 30 30 0 0 1 28 -4 Z" fill="#FFD93D" transform="rotate(90)"/>
+        <path d="M 0 0 L 4 -28 A 30 30 0 0 1 28 -4 Z" fill="#6BCB77" transform="rotate(180)"/>
+        <path d="M 0 0 L 4 -28 A 30 30 0 0 1 28 -4 Z" fill="#4D96FF" transform="rotate(270)"/>
+        <circle cx="0" cy="0" r="6"   fill="rgba(0,0,0,.3)"/>
+        <circle cx="0" cy="0" r="3.5" fill="#eee"/>
+      </svg>
+      <div id="pinwheel-stick"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Mode dots -->
+<div id="mode-dots">
+  <div class="dot active"></div>
+  <div class="dot"></div>
+</div>
+
+<!-- Swipe hint -->
+<div id="swipe-hint">swipe ›</div>
+
+<!-- Start overlay (and mic error state) -->
 <div id="overlay">
-  <div class="emoji">🫧</div>
-  <h1>Blow Bubble</h1>
-  <p>Tap to start</p>
+  <div class="big-emoji">🫧</div>
+  <h1>Blow!</h1>
+  <p class="sub">Tap to start &nbsp;·&nbsp; Swipe to switch</p>
+
+  <div id="mic-error">
+    <h3>🎤 Mic access needed</h3>
+    <ol id="mic-steps"></ol>
+    <p class="platform-note" id="platform-note"></p>
+  </div>
+  <button id="retry-btn" style="display:none">Try again</button>
 </div>
 
-<div id="status">
+<!-- Status bar -->
+<div id="status-bar">
   <div id="mic-dot"></div>
-  <span id="status-text">Listening</span>
+  <span>Listening</span>
 </div>
-
-<p id="hint">Blow into your phone's mic</p>
 
 <script>
-  const bubble  = document.getElementById('bubble');
-  const overlay = document.getElementById('overlay');
-  const status  = document.getElementById('status');
-  const micDot  = document.getElementById('mic-dot');
-  const hint    = document.getElementById('hint');
+// ── Elements ────────────────────────────────────────────────────
+const fxCanvas    = document.getElementById('fx-canvas');
+const fxCtx       = fxCanvas.getContext('2d');
+const flashEl     = document.getElementById('flash');
+const sliderTrack = document.getElementById('slider-track');
+const bubbleEl    = document.getElementById('bubble');
+const levelBadge  = document.getElementById('level-badge');
+const pinwheelSvg = document.getElementById('pinwheel-svg');
+const modeDots    = document.querySelectorAll('.dot');
+const swipeHint   = document.getElementById('swipe-hint');
+const overlay     = document.getElementById('overlay');
+const micError    = document.getElementById('mic-error');
+const micSteps    = document.getElementById('mic-steps');
+const platformNote = document.getElementById('platform-note');
+const retryBtn    = document.getElementById('retry-btn');
+const statusBar   = document.getElementById('status-bar');
+const micDot      = document.getElementById('mic-dot');
 
-  const MIN_SIZE = 64;
-  const MAX_SIZE = Math.min(window.innerWidth, window.innerHeight) * 0.82;
-  const THRESHOLD = 0.013;          // RMS threshold for blow detection
+// ── Canvas resize ──────────────────────────────────────────────
+function resizeCanvas() {
+  fxCanvas.width  = window.innerWidth;
+  fxCanvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-  // Physics constants
-  const GROW_ACCEL     = 0.6;       // velocity added per frame while blowing
-  const GROW_MAX_VEL   = 10;        // terminal grow speed (px/frame)
-  const DEFLATE_ACCEL  = 3.0;       // velocity removed per frame when quiet
-  const DEFLATE_MAX_VEL = -12;      // terminal shrink speed
-  const RMS_SMOOTH     = 0.82;      // exponential smoothing for mic level
+// ── Audio ──────────────────────────────────────────────────────
+let analyser, dataArray;
+let smoothedRMS = 0;
+const RMS_SMOOTH = 0.82;
+const THRESHOLD  = 0.013;
 
-  let size        = MIN_SIZE;
-  let velocity    = 0;
-  let smoothedRMS = 0;
-  let running     = false;
-  let analyser, dataArray;
+function getRMS(buf) {
+  let sq = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const v = buf[i] / 128 - 1;
+    sq += v * v;
+  }
+  return Math.sqrt(sq / buf.length);
+}
 
-  applySize(MIN_SIZE);
+// ── Confetti ───────────────────────────────────────────────────
+const CONFETTI_COLORS = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#F093FB','#FDB96D','#A8EDEA','#FF9A9E'];
+let particles = [];
 
-  function applySize(s) {
-    bubble.style.width  = s + 'px';
-    bubble.style.height = s + 'px';
+function burst(cx, cy, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 14 + 4;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 6,
+      color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+      w: Math.random() * 10 + 5,
+      h: Math.random() * 6 + 3,
+      rot:   Math.random() * 360,
+      rotV:  (Math.random() - 0.5) * 14,
+      alpha: 1,
+      decay: Math.random() * 0.01 + 0.007,
+      gravity: 0.35,
+    });
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.alpha > 0);
+  for (const p of particles) {
+    p.x   += p.vx;
+    p.y   += p.vy;
+    p.vy  += p.gravity;
+    p.vx  *= 0.99;
+    p.rot += p.rotV;
+    p.alpha -= p.decay;
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    fxCtx.save();
+    fxCtx.globalAlpha = Math.max(0, p.alpha);
+    fxCtx.fillStyle = p.color;
+    fxCtx.translate(p.x, p.y);
+    fxCtx.rotate(p.rot * Math.PI / 180);
+    fxCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    fxCtx.restore();
+  }
+}
+
+// ── Flash helper ───────────────────────────────────────────────
+function triggerFlash(type) {
+  flashEl.className = '';
+  void flashEl.offsetWidth;
+  flashEl.className = type;
+}
+
+// ── Swipe / Mode switching ─────────────────────────────────────
+let currentPage  = 0;
+let touchStartX  = 0;
+let touchStartY  = 0;
+
+function switchPage(page) {
+  if (page === currentPage) return;
+  currentPage = page;
+  sliderTrack.style.transform = `translateX(${-page * 100}vw)`;
+  modeDots.forEach((d, i) => d.classList.toggle('active', i === page));
+  swipeHint.textContent = page === 0 ? 'swipe ›' : '‹ swipe';
+  if (page === 0) resetBubble();
+  else            resetPinwheel();
+}
+
+document.addEventListener('touchstart', e => {
+  if (e.target.closest('#overlay')) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (e.target.closest('#overlay')) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+  if (Math.abs(dx) > 55 && dy < 80) {
+    switchPage(dx < 0 ? Math.min(currentPage + 1, 1) : Math.max(currentPage - 1, 0));
+  }
+}, { passive: true });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') switchPage(1);
+  if (e.key === 'ArrowLeft')  switchPage(0);
+});
+
+// ── Bubble state ───────────────────────────────────────────────
+const MIN_BUBBLE = 64;
+const MAX_BUBBLE = Math.min(window.innerWidth, window.innerHeight) * 0.80;
+
+const GROW_ACCEL      = 0.6;
+const GROW_MAX_VEL    = 10;
+const DEFLATE_ACCEL   = 3.0;
+const DEFLATE_MAX_VEL = -12;
+
+const LEVEL_HOLD_MS = [3000, 4000, 5000];
+const LEVEL_STARS   = ['⭐', '⭐⭐', '⭐⭐⭐'];
+
+let bubbleSize   = MIN_BUBBLE;
+let bubbleVel    = 0;
+let bubbleState  = 'idle';   // idle | maxed | popping
+let holdMs       = 0;
+let holdProgress = 0;
+let currentLevel = 0;
+
+function applyBubbleSize(s) {
+  bubbleEl.style.width  = s + 'px';
+  bubbleEl.style.height = s + 'px';
+}
+applyBubbleSize(MIN_BUBBLE);
+
+function resetBubble() {
+  bubbleSize   = MIN_BUBBLE;
+  bubbleVel    = 0;
+  bubbleState  = 'idle';
+  holdMs       = 0;
+  holdProgress = 0;
+  bubbleEl.classList.remove('popping', 'maxed');
+  applyBubbleSize(MIN_BUBBLE);
+}
+
+function popBubble() {
+  bubbleState = 'popping';
+  bubbleEl.classList.add('popping');
+  bubbleEl.classList.remove('maxed');
+
+  const r = bubbleEl.getBoundingClientRect();
+  burst(r.left + r.width / 2, r.top + r.height / 2, 120);
+  triggerFlash('pop');
+
+  currentLevel = (currentLevel + 1) % LEVEL_HOLD_MS.length;
+  levelBadge.textContent = LEVEL_STARS[currentLevel];
+  levelBadge.classList.remove('bounce');
+  void levelBadge.offsetWidth;
+  levelBadge.classList.add('bounce');
+
+  setTimeout(() => {
+    resetBubble();
+    levelBadge.classList.remove('bounce');
+  }, 850);
+}
+
+function updateBubble(dt, blowing) {
+  if (bubbleState === 'popping') return;
+
+  if (blowing) {
+    bubbleVel = Math.min(bubbleVel + GROW_ACCEL, GROW_MAX_VEL);
+  } else {
+    bubbleVel = Math.max(bubbleVel - DEFLATE_ACCEL, DEFLATE_MAX_VEL);
   }
 
-  function rms(buf) {
-    let sq = 0;
-    for (let i = 0; i < buf.length; i++) {
-      const v = buf[i] / 128 - 1;
-      sq += v * v;
-    }
-    return Math.sqrt(sq / buf.length);
+  bubbleSize = Math.max(MIN_BUBBLE, Math.min(bubbleSize + bubbleVel, MAX_BUBBLE));
+  if (bubbleSize <= MIN_BUBBLE || bubbleSize >= MAX_BUBBLE) bubbleVel = 0;
+  applyBubbleSize(bubbleSize);
+
+  if (bubbleSize >= MAX_BUBBLE - 1) {
+    bubbleEl.classList.add('maxed');
+    holdMs += dt;
+    holdProgress = Math.min(holdMs / LEVEL_HOLD_MS[currentLevel], 1);
+    if (holdMs >= LEVEL_HOLD_MS[currentLevel]) popBubble();
+  } else {
+    bubbleEl.classList.remove('maxed');
+    holdMs = 0;
+    holdProgress = 0;
+  }
+}
+
+function drawHoldRing() {
+  if (holdProgress <= 0 || bubbleState === 'popping') return;
+  const r  = bubbleEl.getBoundingClientRect();
+  const cx = r.left + r.width  / 2;
+  const cy = r.top  + r.height / 2;
+  const radius = r.width / 2 + 12;
+
+  fxCtx.save();
+  fxCtx.strokeStyle = `hsl(${195 - holdProgress * 55}, ${90 - holdProgress * 15}%, ${60 + holdProgress * 30}%)`;
+  fxCtx.lineWidth = 5;
+  fxCtx.lineCap = 'round';
+  fxCtx.globalAlpha = 0.55 + holdProgress * 0.45;
+  fxCtx.beginPath();
+  fxCtx.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + holdProgress * Math.PI * 2);
+  fxCtx.stroke();
+  fxCtx.restore();
+}
+
+// ── Pinwheel state ─────────────────────────────────────────────
+const WHEEL_DRAG          = 0.94;
+const WHEEL_MAX_SPEED     = 22;   // deg/frame terminal velocity
+const WHEEL_LERP          = 0.08; // approach factor
+const CELEBRATION_SPEED   = 14;   // deg/frame to trigger party
+const CELEBRATION_MS      = 1500; // sustain needed
+
+let wheelAngle    = 0;
+let wheelSpeed    = 0;
+let pinwheelState = 'idle';  // idle | celebrating
+let fastMs        = 0;
+
+function resetPinwheel() {
+  wheelSpeed    = 0;
+  pinwheelState = 'idle';
+  fastMs        = 0;
+  pinwheelSvg.style.filter = '';
+}
+
+function updatePinwheel(dt, blowing, rmsLevel) {
+  if (pinwheelState === 'celebrating') return;
+
+  if (blowing) {
+    const target = Math.min(((rmsLevel - THRESHOLD) / 0.07) * WHEEL_MAX_SPEED, WHEEL_MAX_SPEED);
+    wheelSpeed += (target - wheelSpeed) * WHEEL_LERP;
+  } else {
+    wheelSpeed *= WHEEL_DRAG;
+    if (wheelSpeed < 0.05) wheelSpeed = 0;
   }
 
-  function tick() {
-    if (!running) return;
+  wheelAngle += wheelSpeed;
+  pinwheelSvg.style.transform = `rotate(${wheelAngle}deg)`;
 
-    analyser.getByteTimeDomainData(dataArray);
-    // Smooth mic level to avoid threshold jitter
-    smoothedRMS = RMS_SMOOTH * smoothedRMS + (1 - RMS_SMOOTH) * rms(dataArray);
-    const blowing = smoothedRMS > THRESHOLD;
+  // Glow intensifies as speed climbs
+  const t = Math.min(wheelSpeed / WHEEL_MAX_SPEED, 1);
+  pinwheelSvg.style.filter = t > 0.1
+    ? `drop-shadow(0 0 ${t * 18}px rgba(255,215,0,${t * 0.75}))`
+    : '';
 
-    if (blowing) {
-      // Accelerate up to terminal grow speed
-      velocity = Math.min(velocity + GROW_ACCEL, GROW_MAX_VEL);
-      micDot.classList.add('blowing');
-    } else {
-      // Decelerate then push into fast shrink
-      velocity = Math.max(velocity - DEFLATE_ACCEL, DEFLATE_MAX_VEL);
-      micDot.classList.remove('blowing');
-    }
+  if (wheelSpeed >= CELEBRATION_SPEED) {
+    fastMs += dt;
+    if (fastMs >= CELEBRATION_MS) celebratePinwheel();
+  } else {
+    fastMs = 0;
+  }
+}
 
-    size = Math.max(MIN_SIZE, Math.min(size + velocity, MAX_SIZE));
+function celebratePinwheel() {
+  pinwheelState = 'celebrating';
+  const r = pinwheelSvg.getBoundingClientRect();
+  burst(r.left + r.width / 2, r.top + r.height / 2, 130);
+  triggerFlash('celebrate');
 
-    // Kill velocity when hitting a wall
-    if (size <= MIN_SIZE || size >= MAX_SIZE) velocity = 0;
+  setTimeout(() => {
+    wheelSpeed    = 8;
+    fastMs        = 0;
+    pinwheelState = 'idle';
+  }, 2500);
+}
 
-    applySize(size);
-    requestAnimationFrame(tick);
+// ── Game loop ──────────────────────────────────────────────────
+let running = false;
+let lastTs  = null;
+
+function gameLoop(ts) {
+  if (!running) return;
+
+  const dt = lastTs ? Math.min(ts - lastTs, 50) : 16;
+  lastTs = ts;
+
+  analyser.getByteTimeDomainData(dataArray);
+  smoothedRMS = RMS_SMOOTH * smoothedRMS + (1 - RMS_SMOOTH) * getRMS(dataArray);
+  const blowing = smoothedRMS > THRESHOLD;
+  micDot.classList.toggle('blowing', blowing);
+
+  if (currentPage === 0) updateBubble(dt, blowing);
+  else                   updatePinwheel(dt, blowing, smoothedRMS);
+
+  updateParticles();
+
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  if (currentPage === 0) drawHoldRing();
+  drawParticles();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ── Mic error guidance ─────────────────────────────────────────
+function detectPlatform() {
+  const ua  = navigator.userAgent;
+  const ios = /iphone|ipad|ipod/i.test(ua);
+  const android = /android/i.test(ua);
+  const safari  = /safari/i.test(ua) && !/chrome/i.test(ua);
+  const chrome  = /chrome/i.test(ua) && !/edg/i.test(ua);
+  if (ios && safari) return 'ios-safari';
+  if (ios && chrome) return 'ios-chrome';
+  if (android)       return 'android';
+  if (safari)        return 'mac-safari';
+  return 'chrome'; // default for desktop chrome/edge
+}
+
+const MIC_GUIDANCE = {
+  'ios-safari': {
+    steps: [
+      'You tapped "Don\'t Allow" — tap <b>Refresh</b> below to try again.',
+      'When the mic prompt appears, tap <b>Allow</b>.',
+      'Still not working? Open <b>Settings → Safari → Microphone</b> and set it to <b>Allow</b>.',
+      'Then come back here and refresh.',
+    ],
+    note: 'iPhone/iPad · Safari',
+  },
+  'ios-chrome': {
+    steps: [
+      'Chrome on iPhone doesn\'t support mic in web apps.',
+      'Open this page in <b>Safari</b> instead — it works there!',
+      'Tap the share button (box with arrow) → <b>Open in Safari</b>.',
+    ],
+    note: 'iPhone · Chrome — switch to Safari',
+  },
+  'android': {
+    steps: [
+      'Tap <b>Refresh</b> below and allow mic when prompted.',
+      'If the prompt doesn\'t appear: tap the <b>🔒 lock icon</b> in the address bar.',
+      'Find <b>Microphone</b> and set it to <b>Allow</b>.',
+      'Then refresh the page.',
+    ],
+    note: 'Android',
+  },
+  'mac-safari': {
+    steps: [
+      'Click <b>Refresh</b> and allow mic access when asked.',
+      'Still blocked? Go to <b>Safari → Settings for This Website</b>.',
+      'Set <b>Microphone</b> to <b>Allow</b> and refresh.',
+    ],
+    note: 'Mac · Safari',
+  },
+  'chrome': {
+    steps: [
+      'Click <b>Refresh</b> and allow mic when the browser asks.',
+      'Blocked by mistake? Click the <b>🔒 lock icon</b> in the address bar.',
+      'Set <b>Microphone</b> to <b>Allow</b> and refresh.',
+    ],
+    note: 'Desktop browser',
+  },
+};
+
+function showMicError() {
+  const platform = detectPlatform();
+  const guide = MIC_GUIDANCE[platform] || MIC_GUIDANCE['chrome'];
+
+  micSteps.innerHTML = guide.steps.map(s => `<li>${s}</li>`).join('');
+  platformNote.textContent = guide.note;
+  micError.classList.add('visible');
+  retryBtn.style.display = 'block';
+}
+
+retryBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  micError.classList.remove('visible');
+  retryBtn.style.display = 'none';
+  tryStart();
+});
+
+// ── Start ──────────────────────────────────────────────────────
+async function tryStart() {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch {
+    showMicError();
+    return;
   }
 
-  async function start() {
-    let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch {
-      overlay.querySelector('p').textContent = 'Mic access denied. Please allow and reload.';
-      return;
-    }
+  const ctx    = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+  const source = ctx.createMediaStreamSource(stream);
+  analyser     = ctx.createAnalyser();
+  analyser.fftSize = 512;
+  dataArray    = new Uint8Array(analyser.fftSize);
+  source.connect(analyser);
 
-    const ctx    = new (window.AudioContext || window.webkitAudioContext)();
-    const source = ctx.createMediaStreamSource(stream);
-    analyser     = ctx.createAnalyser();
-    analyser.fftSize = 512;
-    dataArray    = new Uint8Array(analyser.fftSize);
-    source.connect(analyser);
+  overlay.classList.add('hidden');
+  statusBar.classList.add('visible');
+  setTimeout(() => swipeHint.classList.add('hidden'), 5000);
 
-    overlay.classList.add('hidden');
-    status.classList.add('visible');
-    setTimeout(() => hint.classList.add('hidden'), 4000);
+  running = true;
+  requestAnimationFrame(gameLoop);
+}
 
-    running = true;
-    requestAnimationFrame(tick);
-  }
-
-  overlay.addEventListener('click', start);
-  // Explicit touchstart for iOS Safari to fire getUserMedia inside gesture
-  overlay.addEventListener('touchstart', (e) => { e.preventDefault(); start(); }, { passive: false });
+overlay.addEventListener('click', tryStart);
+overlay.addEventListener('touchstart', e => {
+  if (e.target === retryBtn) return;
+  e.preventDefault();
+  tryStart();
+}, { passive: false });
 </script>
 
 </body>
