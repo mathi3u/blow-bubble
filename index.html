@@ -176,14 +176,21 @@
   const micDot  = document.getElementById('mic-dot');
   const hint    = document.getElementById('hint');
 
-  const MIN_SIZE    = 64;
-  const MAX_SIZE    = Math.min(window.innerWidth, window.innerHeight) * 0.82;
-  const THRESHOLD   = 0.013;  // RMS level that counts as blowing
-  const GROW_RATE   = 7;      // px per animation frame while blowing
-  const SHRINK_RATE = 2.5;    // px per frame when silent
+  const MIN_SIZE = 64;
+  const MAX_SIZE = Math.min(window.innerWidth, window.innerHeight) * 0.82;
+  const THRESHOLD = 0.013;          // RMS threshold for blow detection
 
-  let size    = MIN_SIZE;
-  let running = false;
+  // Physics constants
+  const GROW_ACCEL     = 0.6;       // velocity added per frame while blowing
+  const GROW_MAX_VEL   = 10;        // terminal grow speed (px/frame)
+  const DEFLATE_ACCEL  = 3.0;       // velocity removed per frame when quiet
+  const DEFLATE_MAX_VEL = -12;      // terminal shrink speed
+  const RMS_SMOOTH     = 0.82;      // exponential smoothing for mic level
+
+  let size        = MIN_SIZE;
+  let velocity    = 0;
+  let smoothedRMS = 0;
+  let running     = false;
   let analyser, dataArray;
 
   applySize(MIN_SIZE);
@@ -196,7 +203,7 @@
   function rms(buf) {
     let sq = 0;
     for (let i = 0; i < buf.length; i++) {
-      const v = buf[i] / 128 - 1;  // 0-255 byte -> -1..1
+      const v = buf[i] / 128 - 1;
       sq += v * v;
     }
     return Math.sqrt(sq / buf.length);
@@ -206,15 +213,24 @@
     if (!running) return;
 
     analyser.getByteTimeDomainData(dataArray);
-    const blowing = rms(dataArray) > THRESHOLD;
+    // Smooth mic level to avoid threshold jitter
+    smoothedRMS = RMS_SMOOTH * smoothedRMS + (1 - RMS_SMOOTH) * rms(dataArray);
+    const blowing = smoothedRMS > THRESHOLD;
 
     if (blowing) {
-      size = Math.min(size + GROW_RATE, MAX_SIZE);
+      // Accelerate up to terminal grow speed
+      velocity = Math.min(velocity + GROW_ACCEL, GROW_MAX_VEL);
       micDot.classList.add('blowing');
     } else {
-      size = Math.max(size - SHRINK_RATE, MIN_SIZE);
+      // Decelerate then push into fast shrink
+      velocity = Math.max(velocity - DEFLATE_ACCEL, DEFLATE_MAX_VEL);
       micDot.classList.remove('blowing');
     }
+
+    size = Math.max(MIN_SIZE, Math.min(size + velocity, MAX_SIZE));
+
+    // Kill velocity when hitting a wall
+    if (size <= MIN_SIZE || size >= MAX_SIZE) velocity = 0;
 
     applySize(size);
     requestAnimationFrame(tick);
