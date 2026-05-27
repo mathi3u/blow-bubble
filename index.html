@@ -1263,7 +1263,6 @@ async function tryStart() {
   overlay.classList.add('hidden');
   statusBar.classList.add('visible');
   micHint.classList.add('show');
-  setTimeout(() => micHint.classList.remove('show'), 7000);
   setTimeout(() => swipeHint.classList.add('hidden'), 5000);
 
   running = true;
