@@ -6,6 +6,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Blow Bubble</title>
+
+  <!-- PostHog analytics — replace YOUR_PROJECT_KEY with your key from posthog.com/settings -->
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]);t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init('YOUR_PROJECT_KEY',{api_host:'https://us.i.posthog.com',person_profiles:'identified_only'})
+  </script>
+
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -42,7 +49,7 @@
     /* ── Slider ─────────────────────────────────────────────── */
     #slider-track {
       display: flex;
-      width: 200vw;
+      width: 400vw;
       height: 100dvh;
       transition: transform 0.36s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
@@ -202,6 +209,33 @@
       height: 90px;
       background: linear-gradient(to bottom, #aaa, #555);
       border-radius: 2.5px;
+    }
+
+    /* ── Dandelion ───────────────────────────────────────────── */
+    #dandelion-scene {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #dandelion-svg {
+      width: min(240px, 58vw);
+      height: min(240px, 58vw);
+    }
+    #dandelion-stick {
+      width: 5px;
+      height: 90px;
+      background: linear-gradient(to bottom, #6BCB77, #3a8a45);
+      border-radius: 2.5px;
+    }
+
+    /* ── Candle ──────────────────────────────────────────────── */
+    #candle-scene {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #candle-svg {
+      width: min(120px, 32vw);
     }
 
     /* ── Mode dots ───────────────────────────────────────────── */
@@ -376,11 +410,45 @@
     </div>
   </div>
 
+  <!-- ── PAGE 2: Dandelion ──────────────────────────────── -->
+  <div class="page" id="dandelion-page">
+    <div id="dandelion-scene">
+      <svg id="dandelion-svg" viewBox="-60 -60 120 120">
+        <!-- Seeds injected by JS; center disc always on top -->
+        <circle id="dan-center" cx="0" cy="0" r="6" fill="#c8a96e"/>
+      </svg>
+      <div id="dandelion-stick"></div>
+    </div>
+  </div>
+
+  <!-- ── PAGE 3: Candle ─────────────────────────────────── -->
+  <div class="page" id="candle-page">
+    <div id="candle-scene">
+      <!-- viewBox: x -25..25, y -45..70. Origin (0,0) = wick tip / flame pivot -->
+      <svg id="candle-svg" viewBox="-25 -45 50 115">
+        <g id="flame-group">
+          <ellipse cx="0" cy="-16" rx="9"   ry="20" fill="#FF8C00" opacity="0.9"/>
+          <ellipse cx="0" cy="-14" rx="5"   ry="14" fill="#FFD700"/>
+          <ellipse cx="0" cy="-11" rx="2.5" ry="8"  fill="#fff" opacity="0.85"/>
+        </g>
+        <!-- Wick -->
+        <line x1="0" y1="0" x2="0" y2="8" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Candle body -->
+        <rect x="-15" y="9" width="30" height="56" rx="4" fill="#a0c4ff"/>
+        <ellipse cx="0" cy="9" rx="15" ry="2.5" fill="#c2d8ff"/>
+        <line x1="-15" y1="28" x2="15" y2="28" stroke="rgba(255,255,255,.22)" stroke-width="1"/>
+        <line x1="-15" y1="47" x2="15" y2="47" stroke="rgba(255,255,255,.22)" stroke-width="1"/>
+      </svg>
+    </div>
+  </div>
+
 </div>
 
 <!-- Mode dots -->
 <div id="mode-dots">
   <div class="dot active"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
   <div class="dot"></div>
 </div>
 
@@ -429,6 +497,8 @@ const pinwheelSvg  = document.getElementById('pinwheel-svg');
 const modeDots     = document.querySelectorAll('.dot');
 const swipeHint    = document.getElementById('swipe-hint');
 const celebrationEl = document.getElementById('celebration');
+const celTitle      = document.getElementById('cel-title');
+const celSub        = document.getElementById('cel-sub');
 const breatheHint  = document.getElementById('breathe-hint');
 const overlay      = document.getElementById('overlay');
 const micError     = document.getElementById('mic-error');
@@ -512,8 +582,14 @@ function drawParticles() {
     fxCtx.globalAlpha = Math.max(0, p.alpha);
     fxCtx.fillStyle = p.color;
     fxCtx.translate(p.x, p.y);
-    fxCtx.rotate(p.rot * Math.PI / 180);
-    fxCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    if (p.isCircle) {
+      fxCtx.beginPath();
+      fxCtx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+      fxCtx.fill();
+    } else {
+      fxCtx.rotate(p.rot * Math.PI / 180);
+      fxCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    }
     fxCtx.restore();
   }
 }
@@ -535,9 +611,12 @@ function switchPage(page) {
   currentPage = page;
   sliderTrack.style.transform = `translateX(${-page * 100}vw)`;
   modeDots.forEach((d, i) => d.classList.toggle('active', i === page));
-  swipeHint.textContent = page === 0 ? 'swipe ›' : '‹ swipe';
-  if (page === 0) resetBubble();
-  else            resetPinwheel();
+  swipeHint.textContent = page === 0 ? 'swipe ›' : page === 3 ? '‹ swipe' : '‹ swipe ›';
+  if      (page === 0) resetBubble();
+  else if (page === 1) resetPinwheel();
+  else if (page === 2) initDandelion();
+  else if (page === 3) resetCandle();
+  if (window.posthog) posthog.capture('mode_switch', { mode: page });
 }
 
 document.addEventListener('touchstart', e => {
@@ -551,13 +630,13 @@ document.addEventListener('touchend', e => {
   const dx = e.changedTouches[0].clientX - touchStartX;
   const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
   if (Math.abs(dx) > 55 && dy < 80) {
-    switchPage(dx < 0 ? Math.min(currentPage + 1, 1) : Math.max(currentPage - 1, 0));
+    switchPage(dx < 0 ? Math.min(currentPage + 1, 3) : Math.max(currentPage - 1, 0));
   }
 }, { passive: true });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight') switchPage(1);
-  if (e.key === 'ArrowLeft')  switchPage(0);
+  if (e.key === 'ArrowRight') switchPage(Math.min(currentPage + 1, 3));
+  if (e.key === 'ArrowLeft')  switchPage(Math.max(currentPage - 1, 0));
 });
 
 // ── Bubble state ───────────────────────────────────────────────
@@ -608,9 +687,12 @@ function popBubble() {
 
   // Show celebration overlay
   bubbleState = 'celebrating';
+  celTitle.textContent = 'YAY!';
+  celSub.textContent   = 'You did it!';
   celebrationEl.classList.remove('show');
   void celebrationEl.offsetWidth;
   celebrationEl.classList.add('show');
+  if (window.posthog) posthog.capture('bubble_pop', { level: currentLevel });
 
   setTimeout(() => {
     // Hide celebration, advance level
@@ -744,7 +826,7 @@ function updatePinwheel(dt, blowing, rmsLevel) {
   if (pinwheelState === 'celebrating') return;
 
   if (blowing) {
-    const target = Math.min(((rmsLevel - THRESHOLD) / 0.07) * WHEEL_MAX_SPEED, WHEEL_MAX_SPEED);
+    const target = Math.min(((rmsLevel - 0.030) / 0.07) * WHEEL_MAX_SPEED, WHEEL_MAX_SPEED);
     wheelSpeed += (target - wheelSpeed) * WHEEL_LERP;
   } else {
     wheelSpeed *= WHEEL_DRAG;
@@ -782,12 +864,247 @@ function celebratePinwheel() {
   const r = pinwheelSvg.getBoundingClientRect();
   burst(r.left + r.width / 2, r.top + r.height / 2, 130);
   triggerFlash('celebrate');
+  if (window.posthog) posthog.capture('pinwheel_celebrate');
 
   setTimeout(() => {
     wheelSpeed    = 8;
     fastMs        = 0;
     pinwheelState = 'idle';
   }, 2500);
+}
+
+// ── Dandelion state ────────────────────────────────────────
+const DAN_SEED_COUNT  = 12;
+const DAN_SEED_LENGTHS = [40,36,44,38,42,36,40,44,38,42,36,40];
+const DAN_SEED_COLORS  = ['#dde8a0','#e8f4a0','#d0e890','#cce098','#d8eca8'];
+
+const dandelionSvg = document.getElementById('dandelion-svg');
+const danCenter    = document.getElementById('dan-center');
+
+let danSeeds       = [];
+let danSeedsLeft   = DAN_SEED_COUNT;
+let dandelionState = 'idle'; // idle | celebrating | regrowing
+let danDetachTimer = 0;
+
+function initDandelion() {
+  danSeeds.forEach(s => s.el && s.el.remove());
+  danSeeds = [];
+  danSeedsLeft   = DAN_SEED_COUNT;
+  dandelionState = 'idle';
+  danDetachTimer = 0;
+
+  for (let i = 0; i < DAN_SEED_COUNT; i++) {
+    const angleRad = (i / DAN_SEED_COUNT) * Math.PI * 2;
+    const length   = DAN_SEED_LENGTHS[i];
+    const cosA     = Math.cos(angleRad);
+    const sinA     = Math.sin(angleRad);
+    const tipX     = cosA * length;
+    const tipY     = sinA * length;
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'dan-seed');
+    g.style.transition = 'opacity 0.15s';
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1','0'); line.setAttribute('y1','0');
+    line.setAttribute('x2', tipX); line.setAttribute('y2', tipY);
+    line.setAttribute('stroke','#9ab060'); line.setAttribute('stroke-width','1.5');
+    line.setAttribute('stroke-linecap','round');
+
+    const circ = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circ.setAttribute('cx', tipX); circ.setAttribute('cy', tipY);
+    circ.setAttribute('r','6');
+    circ.setAttribute('fill', DAN_SEED_COLORS[i % DAN_SEED_COLORS.length]);
+
+    for (let j = 0; j < 4; j++) {
+      const a = angleRad + (j - 1.5) * 0.4;
+      const fl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      fl.setAttribute('x1', tipX); fl.setAttribute('y1', tipY);
+      fl.setAttribute('x2', tipX + Math.cos(a) * 5);
+      fl.setAttribute('y2', tipY + Math.sin(a) * 5);
+      fl.setAttribute('stroke','#f0f8d0'); fl.setAttribute('stroke-width','1');
+      fl.setAttribute('stroke-linecap','round');
+      g.appendChild(fl);
+    }
+    g.appendChild(line);
+    g.appendChild(circ);
+    dandelionSvg.insertBefore(g, danCenter);
+    danSeeds.push({ angleRad, length, el: g, gone: false });
+  }
+}
+
+function detachSeed() {
+  const remaining = danSeeds.filter(s => !s.gone);
+  if (!remaining.length) return;
+  const seed = remaining[Math.floor(Math.random() * remaining.length)];
+  seed.gone = true;
+  seed.el.style.opacity = '0';
+  danSeedsLeft--;
+
+  const rect  = dandelionSvg.getBoundingClientRect();
+  const scale = rect.width / 120;
+  const cx    = rect.left + rect.width  / 2;
+  const cy    = rect.top  + rect.height / 2;
+  const tipX  = cx + Math.cos(seed.angleRad) * seed.length * scale;
+  const tipY  = cy + Math.sin(seed.angleRad) * seed.length * scale;
+
+  for (let i = 0; i < 4; i++) {
+    const a = Math.random() * Math.PI * 2;
+    particles.push({
+      x: tipX + (Math.random() - 0.5) * 8,
+      y: tipY + (Math.random() - 0.5) * 8,
+      vx: Math.cos(a) * (Math.random() * 1.0 + 0.2) + (Math.random() - 0.5) * 0.5,
+      vy: -(Math.random() * 1.6 + 0.4),
+      color: DAN_SEED_COLORS[Math.floor(Math.random() * DAN_SEED_COLORS.length)],
+      w: Math.random() * 5 + 3, h: Math.random() * 5 + 3,
+      rot: Math.random() * 360, rotV: (Math.random() - 0.5) * 3,
+      alpha: 0.85, decay: 0.003, gravity: 0.012,
+    });
+  }
+
+  if (danSeedsLeft === 0) setTimeout(celebrateDandelion, 250);
+}
+
+function celebrateDandelion() {
+  dandelionState = 'celebrating';
+  const rect = dandelionSvg.getBoundingClientRect();
+  burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 120);
+  triggerFlash('celebrate');
+
+  celTitle.textContent = 'WOW!';
+  celSub.textContent   = 'All gone!';
+  celebrationEl.classList.remove('show');
+  void celebrationEl.offsetWidth;
+  celebrationEl.classList.add('show');
+  if (window.posthog) posthog.capture('dandelion_complete');
+
+  setTimeout(() => {
+    celebrationEl.classList.remove('show');
+    dandelionState = 'regrowing';
+    setTimeout(() => {
+      danSeeds.forEach((s, i) => {
+        s.gone = false;
+        s.el.style.transition = 'opacity 0.5s';
+        s.el.style.opacity = '0';
+        setTimeout(() => { s.el.style.opacity = '1'; }, 100 + i * 80);
+      });
+      danSeedsLeft = DAN_SEED_COUNT;
+      setTimeout(() => { dandelionState = 'idle'; danDetachTimer = 0; }, 1400);
+    }, 400);
+  }, 2000);
+}
+
+function updateDandelion(dt, blowing, rms) {
+  if (dandelionState !== 'idle' || !blowing || danSeedsLeft === 0) return;
+  danDetachTimer -= dt;
+  if (danDetachTimer <= 0) {
+    detachSeed();
+    danDetachTimer = Math.max(100, 380 - ((rms - 0.030) / 0.07) * 280);
+  }
+}
+
+// ── Candle state ───────────────────────────────────────────
+const candleSvg  = document.getElementById('candle-svg');
+const flameGroup = document.getElementById('flame-group');
+
+let flameLife   = 1.0;
+let candleState = 'idle'; // idle | extinguishing | celebrating | relighting
+let smokeTimer  = 0;
+const CANDLE_BLOW_RATE = 0.9;  // life lost per second at full blow
+const CANDLE_RECOVER   = 0.12; // life gained per second at rest
+
+function resetCandle() {
+  flameLife   = 1.0;
+  candleState = 'idle';
+  smokeTimer  = 0;
+  applyFlameLife();
+}
+
+function applyFlameLife() {
+  const s = Math.max(0, flameLife);
+  flameGroup.setAttribute('transform', `scale(1, ${s})`);
+  flameGroup.setAttribute('opacity', 0.35 + s * 0.65);
+}
+
+function spawnSmoke(cx, cy) {
+  particles.push({
+    x: cx + (Math.random() - 0.5) * 6,
+    y: cy,
+    vx: (Math.random() - 0.5) * 0.7,
+    vy: -(Math.random() * 1.0 + 0.4),
+    color: '#b0b0c0',
+    w: Math.random() * 9 + 6, h: Math.random() * 9 + 6,
+    rot: 0, rotV: (Math.random() - 0.5) * 1.5,
+    alpha: 0.4, decay: 0.004, gravity: -0.008,
+    isCircle: true,
+  });
+}
+
+function extinguishCandle() {
+  candleState = 'extinguishing';
+  flameGroup.setAttribute('opacity', '0');
+
+  setTimeout(() => {
+    const rect = candleSvg.getBoundingClientRect();
+    const svgW = rect.width;
+    const svgH = rect.height;
+    const wickX = rect.left + (0 + 25) / 50 * svgW;
+    const wickY = rect.top  + (0 + 45) / 115 * svgH;
+
+    burst(rect.left + svgW / 2, wickY, 100);
+    triggerFlash('celebrate');
+
+    celTitle.textContent = 'WOW!';
+    celSub.textContent   = 'You blew it out!';
+    celebrationEl.classList.remove('show');
+    void celebrationEl.offsetWidth;
+    celebrationEl.classList.add('show');
+    candleState = 'celebrating';
+    if (window.posthog) posthog.capture('candle_out');
+
+    setTimeout(() => {
+      celebrationEl.classList.remove('show');
+      candleState = 'relighting';
+      flameLife   = 0;
+      let t = 0;
+      const id = setInterval(() => {
+        t += 0.025;
+        flameLife = Math.min(1, t);
+        applyFlameLife();
+        if (t >= 1) { clearInterval(id); candleState = 'idle'; smokeTimer = 0; }
+      }, 40);
+    }, 2200);
+  }, 500);
+}
+
+function updateCandle(dt, blowing, rms) {
+  if (candleState === 'extinguishing' || candleState === 'celebrating') {
+    smokeTimer += dt;
+    if (smokeTimer >= 90) {
+      smokeTimer = 0;
+      const rect = candleSvg.getBoundingClientRect();
+      const wickX = rect.left + (0 + 25) / 50 * rect.width;
+      const wickY = rect.top  + (0 + 45) / 115 * rect.height;
+      spawnSmoke(wickX, wickY);
+    }
+    return;
+  }
+  if (candleState !== 'idle') return;
+
+  // Gentle flicker: tiny sine oscillation on top of base scale
+  const flicker = Math.sin(Date.now() / 90) * 0.04;
+  const visualLife = Math.max(0, flameLife + flicker);
+  flameGroup.setAttribute('transform', `scale(1, ${visualLife})`);
+  flameGroup.setAttribute('opacity', 0.35 + visualLife * 0.65);
+
+  if (blowing) {
+    const intensity = Math.min((rms - 0.030) / 0.07, 1);
+    flameLife -= CANDLE_BLOW_RATE * intensity * (dt / 1000);
+  } else {
+    flameLife = Math.min(1, flameLife + CANDLE_RECOVER * (dt / 1000));
+  }
+  flameLife = Math.max(0, Math.min(1, flameLife));
+  if (flameLife <= 0) extinguishCandle();
 }
 
 // ── Game loop ──────────────────────────────────────────────────
@@ -806,8 +1123,10 @@ function gameLoop(ts) {
   const blowing = isBlowing(smoothedRMS, freqData);
   micDot.classList.toggle('blowing', blowing);
 
-  if (currentPage === 0) updateBubble(dt, blowing);
-  else                   updatePinwheel(dt, blowing, smoothedRMS);
+  if      (currentPage === 0) updateBubble(dt, blowing);
+  else if (currentPage === 1) updatePinwheel(dt, blowing, smoothedRMS);
+  else if (currentPage === 2) updateDandelion(dt, blowing, smoothedRMS);
+  else if (currentPage === 3) updateCandle(dt, blowing, smoothedRMS);
 
   updateParticles();
 
