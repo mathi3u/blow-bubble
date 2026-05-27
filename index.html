@@ -349,6 +349,24 @@
     }
     #retry-btn:hover { background: rgba(255,255,255,.2); }
 
+    /* ── Mic hint ───────────────────────────────────────────── */
+    #mic-hint {
+      position: fixed;
+      bottom: max(4.5rem, calc(env(safe-area-inset-bottom) + 3.5rem));
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,.45);
+      font-size: .75rem;
+      letter-spacing: .07em;
+      text-align: center;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.6s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #mic-hint.show { opacity: 1; }
+
     /* ── Status bar ─────────────────────────────────────────── */
     #status-bar {
       position: fixed;
@@ -465,11 +483,15 @@
 <!-- Breathe-in hint -->
 <div id="breathe-hint">Breathe in... 🌬️</div>
 
+<!-- Mic position hint (shows briefly after start) -->
+<div id="mic-hint">blow into the bottom of your phone</div>
+
 <!-- Start overlay (and mic error state) -->
 <div id="overlay">
   <div class="big-emoji">🫧</div>
   <h1>Blow!</h1>
-  <p class="sub">Tap to start &nbsp;·&nbsp; Swipe to switch</p>
+  <p class="sub">Tap to start, then blow into the <strong>bottom</strong> of your phone</p>
+  <p class="sub" style="margin-top:.1rem; font-size:.8em; opacity:.55;">swipe left/right to switch modes</p>
 
   <div id="mic-error">
     <h3>🎤 Mic access needed</h3>
@@ -482,7 +504,6 @@
 <!-- Status bar -->
 <div id="status-bar">
   <div id="mic-dot"></div>
-  <span>Listening</span>
 </div>
 
 <script>
@@ -507,6 +528,7 @@ const platformNote = document.getElementById('platform-note');
 const retryBtn     = document.getElementById('retry-btn');
 const statusBar    = document.getElementById('status-bar');
 const micDot       = document.getElementById('mic-dot');
+const micHint      = document.getElementById('mic-hint');
 
 // ── Canvas resize ──────────────────────────────────────────────
 function resizeCanvas() {
@@ -1240,6 +1262,8 @@ async function tryStart() {
 
   overlay.classList.add('hidden');
   statusBar.classList.add('visible');
+  micHint.classList.add('show');
+  setTimeout(() => micHint.classList.remove('show'), 7000);
   setTimeout(() => swipeHint.classList.add('hidden'), 5000);
 
   running = true;
