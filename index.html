@@ -131,6 +131,59 @@
     }
     #level-badge.bounce { animation: level-up-anim 0.7s ease-out both; }
 
+    /* ── Celebration overlay ────────────────────────────────── */
+    #celebration {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0;
+    }
+    #celebration.show {
+      opacity: 1;
+      animation: cel-enter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes cel-enter {
+      from { transform: scale(0.4); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    #cel-emoji  { font-size: clamp(4rem, 20vw, 7rem); line-height: 1.1; }
+    #cel-title  {
+      font-size: clamp(3.5rem, 18vw, 7rem);
+      font-weight: 900;
+      color: #FFD93D;
+      text-shadow: 0 0 40px rgba(255,217,61,.6), 0 0 80px rgba(255,217,61,.3);
+      line-height: 1;
+    }
+    #cel-sub    {
+      font-size: clamp(1.1rem, 5.5vw, 1.8rem);
+      color: rgba(255,255,255,.85);
+      font-weight: 500;
+    }
+
+    /* ── Breathe-in hint ─────────────────────────────────────── */
+    #breathe-hint {
+      position: fixed;
+      top: 58%;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(180,230,255,.85);
+      font-size: clamp(1.1rem, 5vw, 1.6rem);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.5s;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #breathe-hint.show { opacity: 1; }
+
     /* ── Pinwheel ────────────────────────────────────────────── */
     #pinwheel-scene {
       display: flex;
@@ -334,6 +387,16 @@
 <!-- Swipe hint -->
 <div id="swipe-hint">swipe ›</div>
 
+<!-- Celebration overlay -->
+<div id="celebration">
+  <div id="cel-emoji">🎉</div>
+  <div id="cel-title">YAY!</div>
+  <div id="cel-sub">You did it!</div>
+</div>
+
+<!-- Breathe-in hint -->
+<div id="breathe-hint">Breathe in... 🌬️</div>
+
 <!-- Start overlay (and mic error state) -->
 <div id="overlay">
   <div class="big-emoji">🫧</div>
@@ -356,22 +419,24 @@
 
 <script>
 // ── Elements ────────────────────────────────────────────────────
-const fxCanvas    = document.getElementById('fx-canvas');
-const fxCtx       = fxCanvas.getContext('2d');
-const flashEl     = document.getElementById('flash');
-const sliderTrack = document.getElementById('slider-track');
-const bubbleEl    = document.getElementById('bubble');
-const levelBadge  = document.getElementById('level-badge');
-const pinwheelSvg = document.getElementById('pinwheel-svg');
-const modeDots    = document.querySelectorAll('.dot');
-const swipeHint   = document.getElementById('swipe-hint');
-const overlay     = document.getElementById('overlay');
-const micError    = document.getElementById('mic-error');
-const micSteps    = document.getElementById('mic-steps');
+const fxCanvas     = document.getElementById('fx-canvas');
+const fxCtx        = fxCanvas.getContext('2d');
+const flashEl      = document.getElementById('flash');
+const sliderTrack  = document.getElementById('slider-track');
+const bubbleEl     = document.getElementById('bubble');
+const levelBadge   = document.getElementById('level-badge');
+const pinwheelSvg  = document.getElementById('pinwheel-svg');
+const modeDots     = document.querySelectorAll('.dot');
+const swipeHint    = document.getElementById('swipe-hint');
+const celebrationEl = document.getElementById('celebration');
+const breatheHint  = document.getElementById('breathe-hint');
+const overlay      = document.getElementById('overlay');
+const micError     = document.getElementById('mic-error');
+const micSteps     = document.getElementById('mic-steps');
 const platformNote = document.getElementById('platform-note');
-const retryBtn    = document.getElementById('retry-btn');
-const statusBar   = document.getElementById('status-bar');
-const micDot      = document.getElementById('mic-dot');
+const retryBtn     = document.getElementById('retry-btn');
+const statusBar    = document.getElementById('status-bar');
+const micDot       = document.getElementById('mic-dot');
 
 // ── Canvas resize ──────────────────────────────────────────────
 function resizeCanvas() {
@@ -509,10 +574,12 @@ const LEVEL_STARS   = ['⭐', '⭐⭐', '⭐⭐⭐'];
 
 let bubbleSize   = MIN_BUBBLE;
 let bubbleVel    = 0;
-let bubbleState  = 'idle';   // idle | maxed | popping
+let bubbleState  = 'idle';   // idle | maxed | popping | celebrating | breathing
 let holdMs       = 0;
 let holdProgress = 0;
 let currentLevel = 0;
+let breatheInMs  = 0;
+const BREATHE_DURATION = 2800; // ms of breathe-in phase
 
 function applyBubbleSize(s) {
   bubbleEl.style.width  = s + 'px';
@@ -536,23 +603,64 @@ function popBubble() {
   bubbleEl.classList.remove('maxed');
 
   const r = bubbleEl.getBoundingClientRect();
-  burst(r.left + r.width / 2, r.top + r.height / 2, 120);
+  burst(r.left + r.width / 2, r.top + r.height / 2, 140);
   triggerFlash('pop');
 
-  currentLevel = (currentLevel + 1) % LEVEL_HOLD_MS.length;
-  levelBadge.textContent = LEVEL_STARS[currentLevel];
-  levelBadge.classList.remove('bounce');
-  void levelBadge.offsetWidth;
-  levelBadge.classList.add('bounce');
+  // Show celebration overlay
+  bubbleState = 'celebrating';
+  celebrationEl.classList.remove('show');
+  void celebrationEl.offsetWidth;
+  celebrationEl.classList.add('show');
 
   setTimeout(() => {
-    resetBubble();
+    // Hide celebration, advance level
+    celebrationEl.classList.remove('show');
+
+    currentLevel = (currentLevel + 1) % LEVEL_HOLD_MS.length;
+    levelBadge.textContent = LEVEL_STARS[currentLevel];
     levelBadge.classList.remove('bounce');
-  }, 850);
+    void levelBadge.offsetWidth;
+    levelBadge.classList.add('bounce');
+
+    // Reset bubble to min size
+    bubbleEl.classList.remove('popping');
+    bubbleSize = MIN_BUBBLE;
+    bubbleVel  = 0;
+    holdMs = holdProgress = 0;
+    applyBubbleSize(MIN_BUBBLE);
+
+    // Breathe-in phase
+    bubbleState = 'breathing';
+    breatheInMs = 0;
+    breatheHint.classList.add('show');
+
+    setTimeout(() => {
+      breatheHint.classList.remove('show');
+      levelBadge.classList.remove('bounce');
+      bubbleState = 'idle';
+    }, BREATHE_DURATION);
+
+  }, 1600);
+}
+
+function drawBreatheInRings() {
+  const cx = window.innerWidth  / 2;
+  const cy = window.innerHeight / 2;
+  const cycleMs = BREATHE_DURATION / 3;          // 3 pulses
+  const t  = (breatheInMs % cycleMs) / cycleMs; // 0→1 per pulse
+  const baseR = MIN_BUBBLE / 2 + 8;
+
+  fxCtx.save();
+  fxCtx.strokeStyle = `rgba(150,220,255,${(1 - t) * 0.65})`;
+  fxCtx.lineWidth = 3 + (1 - t) * 3;
+  fxCtx.beginPath();
+  fxCtx.arc(cx, cy, baseR + t * 65, 0, Math.PI * 2);
+  fxCtx.stroke();
+  fxCtx.restore();
 }
 
 function updateBubble(dt, blowing) {
-  if (bubbleState === 'popping') return;
+  if (bubbleState === 'popping' || bubbleState === 'celebrating' || bubbleState === 'breathing') return;
 
   if (blowing) {
     bubbleVel = Math.min(bubbleVel + GROW_ACCEL, GROW_MAX_VEL);
@@ -703,8 +811,13 @@ function gameLoop(ts) {
 
   updateParticles();
 
+  if (bubbleState === 'breathing') breatheInMs += dt;
+
   fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-  if (currentPage === 0) drawHoldRing();
+  if (currentPage === 0) {
+    drawHoldRing();
+    if (bubbleState === 'breathing') drawBreatheInRings();
+  }
   drawParticles();
 
   requestAnimationFrame(gameLoop);
